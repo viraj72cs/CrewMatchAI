@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.services.gemini import chat_with_gemini
-from app.services.session_store import get_or_create_session, clear_confirmation
+from app.services.session_store import get_or_create_session, get_session, clear_confirmation
 
 from app.tools.booking_tools import book_team
 from app.tools.cancellation_tools import cancel_booking, find_replacement_candidates
@@ -231,8 +231,6 @@ def book_team_endpoint(session_id: str):
     Directly book the team stored in the session.
     Call this after the user confirms in Flutter UI.
     """
-    from app.services.session_store import get_session
-
     session = get_session(session_id)
     if not session:
         return {
@@ -319,8 +317,6 @@ if DEBUG_MODE:
     @app.get("/session/{session_id}")
     def get_session_state(session_id: str):
         """Debug: inspect the current session state."""
-        from app.services.session_store import get_session
-
         session = get_session(session_id)
         if not session:
             return {

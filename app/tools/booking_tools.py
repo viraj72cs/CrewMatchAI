@@ -66,6 +66,10 @@ def book_crew_member(
         )
 
         if result.data:
+            try:
+                supabase.table("crew_availability").update({"status": "BOOKED"}).eq("crew_id", crew_id).execute()
+            except Exception:
+                pass
             return {
                 "success": True,
                 "booking": result.data[0]

@@ -48,6 +48,11 @@ def cancel_booking(booking_id: str) -> dict:
         .execute()
     )
 
+    try:
+        supabase.table("crew_availability").update({"status": "AVAILABLE"}).eq("crew_id", booking["crew_id"]).execute()
+    except Exception:
+        pass
+
     return {
         "success": True,
         "cancelled_booking": result.data[0] if result.data else booking,
