@@ -5,7 +5,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Support single key or multiple comma-separated keys (e.g. key1,key2,key3)
+_raw_keys = os.getenv("GEMINI_API_KEYS") or os.getenv("GEMINI_API_KEY") or ""
+GEMINI_API_KEYS = [k.strip() for k in _raw_keys.split(",") if k.strip()]
+GEMINI_API_KEY = GEMINI_API_KEYS[0] if GEMINI_API_KEYS else None
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
@@ -20,7 +24,7 @@ CORS_ORIGINS = [
 ]
 
 
-if not GEMINI_API_KEY:
+if not GEMINI_API_KEYS:
     raise ValueError("GEMINI_API_KEY is missing")
 
 if not SUPABASE_URL:
