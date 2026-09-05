@@ -59,7 +59,7 @@ class GeminiKeyManager:
 
 key_manager = GeminiKeyManager(GEMINI_API_KEYS)
 client = key_manager.clients[0] if key_manager.clients else None
-GEMINI_MODEL = "gemini-3.6-flash"
+GEMINI_MODEL = "gemini-3.5-flash"
 
 
 # ============================================================
@@ -434,11 +434,11 @@ ALL_TOOLS = [
 ]
 
 
-DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
 
 AVAILABLE_MODELS = [
+    {"id": "gemini-3.5-flash", "name": "⚡ Gemini 3.5 Flash (Default - Fast)", "description": "Fast 3.5 model for quick tool execution and reasoning"},
     {"id": "gemini-3.6-flash", "name": "🌟 Gemini 3.6 Flash", "description": "Latest Gemini 3.6 model with full tool reasoning"},
-    {"id": "gemini-3.5-flash", "name": "⚡ Gemini 3.5 Flash", "description": "Fast 3.5 model for quick tool execution"},
 ]
 
 
@@ -529,7 +529,7 @@ USER MESSAGE:
 
     # Build list of candidate models in fallback order
     candidate_models = [selected_model]
-    for m in ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.5-flash"]:
+    for m in ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.5-flash"]:
         if m not in candidate_models:
             candidate_models.append(m)
 
