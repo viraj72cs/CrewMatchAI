@@ -38,8 +38,6 @@ def create_event(
     if organizer_id:
         payload["organizer_id"] = organizer_id
 
-    import uuid
-
     try:
         result = (
             supabase

@@ -1,3 +1,5 @@
+import uuid
+
 from app.services.supabase import supabase
 
 
@@ -23,19 +25,11 @@ def book_crew_member(
     - Crew member is not already booked for a conflicting event
     """
 
-    import uuid
-
     # ---- Validate event exists (if not a demo session UUID) ----
     try:
-        event_check = (
-            supabase
-            .table("events")
-            .select("id")
-            .eq("id", event_id)
-            .execute()
-        )
+        supabase.table("events").select("id").eq("id", event_id).execute()
     except Exception:
-        event_check = type("Obj", (), {"data": []})()
+        pass
 
     # ---- Validate crew member exists ----
     try:

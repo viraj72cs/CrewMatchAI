@@ -1,4 +1,3 @@
-import os
 import sys
 
 # Ensure Windows PowerShell / CMD stdout supports UTF-8 emojis without charmap encoding errors
@@ -49,6 +48,11 @@ class ChatRequest(BaseModel):
 # Simple keyword check — sufficient for hackathon demo.
 # ============================================================
 
+NEGATION_KEYWORDS = [
+    "don't", "dont", "do not", "no", "not yet", "cancel", "wait",
+    "hold on", "never mind", "mat karo", "nahi", "change"
+]
+
 CONFIRMATION_KEYWORDS = [
     "yes", "book", "confirm", "go ahead", "proceed",
     "book them", "looks good", "do it", "ok", "okay",
@@ -59,6 +63,8 @@ CONFIRMATION_KEYWORDS = [
 
 def _is_confirmation(message: str) -> bool:
     lower = message.lower().strip()
+    if any(neg in lower for neg in NEGATION_KEYWORDS):
+        return False
     return any(kw in lower for kw in CONFIRMATION_KEYWORDS)
 
 
