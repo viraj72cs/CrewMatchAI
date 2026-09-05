@@ -434,122 +434,6 @@ ALL_TOOLS = [
 ]
 
 
-# ============================================================
-# HELPER: SMART DATABASE DEMO FALLBACK (RATE LIMIT RESILIENCE)
-# ============================================================
-
-def generate_database_demo_fallback(message: str, session: dict) -> dict:
-    """
-    Emergency hackathon fallback: If all Gemini keys and models are exhausted by 429 quota,
-    query Supabase directly for candidate crew and build a real recommendation.
-    Guarantees the judges' demo never crashes with an error.
-    """
-    lower = message.lower()
-    roles = []
-    if "photo" in lower:
-        roles.append("Photographer")
-    if "decor" in lower:
-        roles.append("Decorator")
-    if "anchor" in lower:
-        roles.append("Anchor")
-    if "secur" in lower:
-        roles.append("Security")
-    if "video" in lower:
-        roles.append("Videographer")
-    if "sound" in lower:
-        roles.append("Sound Engineer")
-
-    if not roles:
-        roles = ["Photographer", "Decorator"]
-
-    budget = float(session.get("budget") or 50000.0)
-    candidates_result = find_team_candidates(
-        roles=roles,
-        event_date="2026-09-15",
-        start_datetime="2026-09-15T17:00:00",
-        end_datetime="2026-09-15T23:00:00",
-        budget=budget
-    )
-
-    by_role = candidates_result.get("candidates_by_role", {})
-    recommended_team = []
-    backups = []
-    alternatives = []
-    total_cost = 0.0
-
-    for role, cands in by_role.items():
-        if not cands:
-            continue
-        sorted_cands = sorted(
-            cands,
-            key=lambda c: (float(c.get("rating") or 0), float(c.get("reliability_score") or 0)),
-            reverse=True
-        )
-        primary = sorted_cands[0]
-        rate = float(primary.get("hourly_rate") or 2500)
-        cost = rate * 6.0
-        total_cost += cost
-        recommended_team.append({
-            "crew_id": primary["id"],
-            "name": primary.get("name", "Specialist"),
-            "role": role,
-            "hourly_rate": rate,
-            "estimated_cost": cost,
-            "reason": f"Top verified {role} in database with {primary.get('experience_years', 3)} yrs experience and {primary.get('rating', 4.9)}★ rating."
-        })
-
-        if len(sorted_cands) > 1:
-            backup = sorted_cands[1]
-            b_rate = float(backup.get("hourly_rate") or rate)
-            backups.append({
-                "role": role,
-                "primary_crew_id": primary["id"],
-                "primary_name": primary.get("name", ""),
-                "backup_crew_id": backup["id"],
-                "backup_name": backup.get("name", ""),
-                "backup_rate": b_rate,
-                "reason": f"Available standby match with {backup.get('rating', 4.8)}★ rating."
-            })
-            alternatives.append({
-                "crew_id": backup["id"],
-                "name": backup.get("name", ""),
-                "role": role,
-                "hourly_rate": b_rate,
-                "reason": "Budget-friendly alternative match.",
-                "category": "Budget Friendly"
-            })
-
-    session["recommended_team"] = recommended_team
-    session["total_cost"] = total_cost
-    session["budget"] = budget
-    session["alternatives"] = alternatives
-    session["backups"] = backups
-    session["awaiting_confirmation"] = True
-
-    rec_data = {
-        "event_id": session.get("event_id"),
-        "recommended_team": recommended_team,
-        "total_cost": total_cost,
-        "budget": budget,
-        "budget_remaining": max(0.0, budget - total_cost),
-        "alternatives": alternatives,
-        "backups": backups
-    }
-
-    team_str = ", ".join([f"{m['name']} ({m['role']})" for m in recommended_team])
-    return {
-        "response_text": (
-            f"I matched the best verified crew from our Supabase database for your event: {team_str}.\n\n"
-            f"Total estimated cost: ₹{total_cost:,.0f} (Budget: ₹{budget:,.0f}, Savings: ₹{max(0.0, budget - total_cost):,.0f}).\n\n"
-            "Would you like to confirm and book this team?"
-        ),
-        "recommendation": rec_data,
-        "event_id": session.get("event_id"),
-        "booking_triggered": False,
-        "fallback_used": True
-    }
-
-
 DEFAULT_GEMINI_MODEL = "gemini-3.6-flash"
 
 AVAILABLE_MODELS = [
@@ -690,8 +574,17 @@ USER MESSAGE:
             break
 
     if interaction is None:
-        print("[Gemini Failover] All keys and models rate-limited. Activating database demo fallback.")
-        return generate_database_demo_fallback(message, session)
+        print("[Gemini Failover] All keys and models rate-limited.")
+        return {
+            "response_text": (
+                "I am currently experiencing high demand and reached the Gemini API quota limits across available keys. "
+                "Please wait a few seconds and try again!"
+            ),
+            "recommendation": None,
+            "event_id": session.get("event_id"),
+            "booking_triggered": False,
+            "rate_limited": True
+        }
 
     # Accumulate all structured data produced during the tool loop.
     recommendation_data = None
@@ -1020,5 +913,10 @@ USER MESSAGE:
                 "event_id": session.get("event_id"),
                 "booking_triggered": False,
             }
-        # Final safety net: Database Demo Fallback
-        return generate_database_demo_fallback(message, session)
+        return {
+            "response_text": "The request timed out or hit API limits while communicating with Gemini. Please try again in a moment.",
+            "recommendation": None,
+            "event_id": session.get("event_id"),
+            "booking_triggered": False,
+            "error": str(e)
+        }
