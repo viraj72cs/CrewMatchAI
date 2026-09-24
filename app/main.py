@@ -288,6 +288,61 @@ def replace(request: ReplacementRequest):
 
 
 # ============================================================
+# DATA ENDPOINTS (for frontend screens)
+# ============================================================
+
+@app.get("/crews")
+def list_crews():
+    """Return all crew profiles with their skills for the Crews Directory screen."""
+    from app.services.supabase import supabase
+
+    crew_response = supabase.table("crew_profiles").select(
+        "id, name, primary_role, experience_years, rating, "
+        "completed_gigs, no_show_count, hourly_rate, reliability_score"
+    ).execute()
+
+    crews = crew_response.data or []
+
+    for crew in crews:
+        skills_resp = supabase.table("crew_skills").select(
+            "skill, skill_level"
+        ).eq("crew_id", crew["id"]).execute()
+        crew["skills"] = skills_resp.data or []
+
+    return {"success": True, "crews": crews}
+
+
+@app.get("/events")
+def list_events():
+    """Return all events with their booked crew for the Events Management screen."""
+    from app.services.supabase import supabase
+
+    events_resp = supabase.table("events").select("*").execute()
+    events = events_resp.data or []
+
+    for event in events:
+        bookings_resp = supabase.table("bookings").select(
+            "id, crew_id, role, status, agreed_rate"
+        ).eq("event_id", event["id"]).execute()
+
+        booking_list = bookings_resp.data or []
+        for booking in booking_list:
+            crew_resp = supabase.table("crew_profiles").select(
+                "name, rating"
+            ).eq("id", booking["crew_id"]).execute()
+            if crew_resp.data:
+                booking["crew_name"] = crew_resp.data[0].get("name", "Unknown")
+                booking["crew_rating"] = crew_resp.data[0].get("rating", 0)
+            else:
+                booking["crew_name"] = "Unknown"
+                booking["crew_rating"] = 0
+
+        event["bookings"] = booking_list
+
+    return {"success": True, "events": events}
+
+
+# ============================================================
 # DEBUG ENDPOINTS (only registered when DEBUG_MODE=true)
 # ============================================================
 
