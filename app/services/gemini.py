@@ -59,7 +59,13 @@ class GeminiKeyManager:
 
 key_manager = GeminiKeyManager(GEMINI_API_KEYS)
 client = key_manager.clients[0] if key_manager.clients else None
-GEMINI_MODEL = "gemini-3.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+GEMINI_MODEL = DEFAULT_GEMINI_MODEL
+
+MODEL_ALIASES = {
+    "gemini-3.5-flash": "gemini-3.5-flash-lite",
+    "gemini-2.5-flash": "gemini-3.5-flash-lite",
+}
 
 
 # ============================================================
@@ -434,11 +440,11 @@ ALL_TOOLS = [
 ]
 
 
-DEFAULT_GEMINI_MODEL = "gemini-3.5-flash"
-
 AVAILABLE_MODELS = [
-    {"id": "gemini-3.5-flash", "name": "⚡ Gemini 3.5 Flash (Default - Fast)", "description": "Fast 3.5 model for quick tool execution and reasoning"},
-    {"id": "gemini-3.6-flash", "name": "🌟 Gemini 3.6 Flash", "description": "Latest Gemini 3.6 model with full tool reasoning"},
+    {"id": "gemini-3.5-flash-lite", "name": "⚡ Gemini 3.5 Flash-Lite (Fastest - Recommended)", "description": "Ultra-fast, low-latency model for instant responses & crew matching"},
+    {"id": "gemini-3.1-flash-lite", "name": "🚀 Gemini 3.1 Flash-Lite (High Speed)", "description": "High-throughput model with rapid tool reasoning"},
+    {"id": "gemini-3.8-flash", "name": "🌟 Gemini 3.8 Flash (Latest Flagship)", "description": "Google's newest Flash reasoning model"},
+    {"id": "gemini-3.6-flash", "name": "🧠 Gemini 3.6 Flash (Deep Reasoning)", "description": "Extended multi-step analysis (subject to higher API traffic)"},
 ]
 
 
@@ -451,12 +457,14 @@ def chat_with_gemini(message: str, session: dict, model_name: str = None) -> dic
     Send a message to Gemini, handle all tool calls in a loop,
     and return a structured result dict.
 
-    Supports dynamic model switching (gemini-2.5-flash, gemini-3.6-flash, etc.).
+    Supports dynamic model switching (gemini-3.5-flash-lite, gemini-3.8-flash, etc.).
+    Automatically aliases deprecated models (e.g. gemini-3.5-flash -> gemini-3.5-flash-lite).
     """
-    selected_model = model_name or session.get("model_name") or DEFAULT_GEMINI_MODEL
+    raw_model = model_name or session.get("model_name") or DEFAULT_GEMINI_MODEL
+    selected_model = MODEL_ALIASES.get(raw_model, raw_model)
     session["model_name"] = selected_model
 
-    print(f"[Gemini] Using model: {selected_model}")
+    print(f"[Gemini] Using model: {selected_model} (requested: {raw_model})")
 
     system_prompt = f"""
 You are CrewMatch AI, an AI event crew planner.
@@ -529,7 +537,7 @@ USER MESSAGE:
 
     # Build list of candidate models in fallback order
     candidate_models = [selected_model]
-    for m in ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.5-flash"]:
+    for m in ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-3.6-flash"]:
         if m not in candidate_models:
             candidate_models.append(m)
 
